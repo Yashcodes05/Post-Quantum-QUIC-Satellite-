@@ -139,6 +139,11 @@ function renderRQ1Chart() {
   if (!unmod || !aware) return;
 
   const labels = unmod.points.map((pt) => `${pt.offset_s >= 0 ? "+" : ""}${pt.offset_s}s`);
+  const globalMax = Math.max(
+    ...DATA.rq1_handover_sweep.flatMap((s) => s.points.map((pt) => pt[metric] || 0))
+  );
+  const yMax = metric === "mean_pto_fires" ? Math.ceil(globalMax * 10) / 10 + 0.2 : Math.ceil(globalMax / 100) * 100 + 100;
+
   CHARTS.rq1Chart = new Chart(document.getElementById("rq1Chart"), {
     type: "line",
     data: {
@@ -172,7 +177,7 @@ function renderRQ1Chart() {
           ticks: { color: COLORS.muted },
           grid: { color: "#1c2847" },
         },
-        y: { ticks: { color: COLORS.muted }, grid: { color: "#1c2847" } },
+        y: { min: 0, max: yMax, ticks: { color: COLORS.muted }, grid: { color: "#1c2847" } },
       },
     },
   });
