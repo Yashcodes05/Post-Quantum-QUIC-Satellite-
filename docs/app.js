@@ -449,10 +449,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("rq34Profile").addEventListener("change", renderRQ34);
   document.getElementById("slaSlider").addEventListener("input", renderRQ34);
   document.getElementById("sbRunBtn").addEventListener("click", runBrowserSandbox);
-  ["sbProfile", "sbStart", "sbScheme", "sbMitigation", "sbRetry"].forEach((id) => {
-    document.getElementById(id).addEventListener("change", runBrowserSandbox);
-    document.getElementById(id).addEventListener("input", runBrowserSandbox);
-  });
   document.getElementById("sampleQlogSelect").addEventListener("change", renderSampleQlog);
 
   document.getElementById("jsonUpload").addEventListener("change", async (e) => {
