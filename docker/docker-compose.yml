@@ -1,0 +1,39 @@
+services:
+  leo-emulator:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: pq-quic-leo-emulator
+    cap_add:
+      - NET_ADMIN
+    networks:
+      leo_net:
+        ipv4_address: 172.28.0.10
+    command: >
+      python3 /workspace/emulator/replay_trace.py
+      --trace /workspace/traces/starlink_15s_trace.csv
+      --iface eth0
+      --loop
+
+  quic-runner:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: pq-quic-runner
+    depends_on:
+      - leo-emulator
+    networks:
+      leo_net:
+        ipv4_address: 172.28.0.20
+    volumes:
+      - ../docs/data:/workspace/docs/data
+    command: >
+      python3 /workspace/experiments/run_matrix.py
+      --output /workspace/docs/data/benchmark_results.json
+
+networks:
+  leo_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24

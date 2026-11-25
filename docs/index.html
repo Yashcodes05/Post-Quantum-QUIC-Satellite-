@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Handover-Aware Post-Quantum QUIC over LEO Satellite Networks</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>Handover-Aware Post-Quantum QUIC over LEO Satellite Networks</h1>
+      <p>Advanced Computer Networks (ACN) &middot; Trace-Driven Transport &amp; Handshake Analyzer</p>
+    </div>
+    <div class="badge-row">
+      <span class="badge">Starlink 15s Handover Cycle (12/27/42/57s)</span>
+      <span class="badge green">RFC 9000 / 9002 + 3&times; Anti-Amplification</span>
+      <label class="upload-btn" for="jsonUpload">Upload Custom Results JSON</label>
+      <input type="file" id="jsonUpload" accept=".json" hidden />
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="kpi-grid" id="kpiGrid">
+      <div class="kpi-card">
+        <div class="kpi-label">Classical Baseline (LEO)</div>
+        <div class="kpi-value" id="kpiClassical">--</div>
+        <div class="kpi-sub">X25519 + RSA-2048 (1C / 3S pkts)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">PQ Standard (LEO)</div>
+        <div class="kpi-value" id="kpiPQ">--</div>
+        <div class="kpi-sub">Kyber768 + Dilithium3 (3C / 10S pkts)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">3&times; Anti-Amplification Triggers</div>
+        <div class="kpi-value" id="kpiAmp">--</div>
+        <div class="kpi-sub">Profiles exceeding 3&times; Initial byte cap</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">PTO Reduction (Handover-Aware)</div>
+        <div class="kpi-value" id="kpiPto">--</div>
+        <div class="kpi-sub">Fewer Probe Timeouts near handover</div>
+      </div>
+    </section>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="overview">1. LEO Link Trace</button>
+      <button class="tab-btn" data-tab="rq1">2. RQ1: Handover Sweep</button>
+      <button class="tab-btn" data-tab="rq2">3. RQ2: Algo &amp; 3&times; Limit</button>
+      <button class="tab-btn" data-tab="rq34">4. RQ3 &amp; RQ4: Mitigations</button>
+      <button class="tab-btn" data-tab="sandbox">5. Live Handshake &amp; qlog</button>
+    </nav>
+
+    <!-- TAB 1: OVERVIEW -->
+    <section id="tab-overview" class="tab-panel active">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Starlink 60-Second LEO Link Trace (RTT &amp; Handover Burst Loss)</div>
+            <div class="card-desc">Periodic global-controller link reassignments every 15s (12s, 27s, 42s, 57s) cause RTT spikes and burst packet loss.</div>
+          </div>
+        </div>
+        <div class="chart-box"><canvas id="traceChart"></canvas></div>
+      </div>
+    </section>
+
+    <!-- TAB 2: RQ1 -->
+    <section id="tab-rq1" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">RQ1: Handshake Start Time vs. 15s Handover Boundary (t = 12.0s)</div>
+            <div class="card-desc">Compare Unmodified QUIC vs. Handover-Aware Scheme across start offsets (-2.0s to +2.0s).</div>
+          </div>
+          <div class="controls">
+            <label for="rq1Profile">Profile:</label>
+            <select id="rq1Profile"></select>
+            <label for="rq1Metric">Metric:</label>
+            <select id="rq1Metric">
+              <option value="mean_ms">Total Completion Time (ms)</option>
+              <option value="mean_pto_fires">Mean PTO Fires</option>
+              <option value="p95_ms">P95 Latency (ms)</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-box"><canvas id="rq1Chart"></canvas></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: RQ2 -->
+    <section id="tab-rq2" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">RQ2: LEO vs. Terrestrial Handshake Latency by Cryptographic Profile</div>
+            <div class="card-desc">Larger PQ flights (Dilithium3/5, SPHINCS+) amplify RTT penalties and hit QUIC's 3&times; anti-amplification limit.</div>
+          </div>
+        </div>
+        <div class="chart-box"><canvas id="rq2Chart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Transport &amp; Anti-Amplification Matrix</div>
+        </div>
+        <div class="table-wrap">
+          <table id="rq2Table">
+            <thead>
+              <tr>
+                <th>Profile</th>
+                <th>Category</th>
+                <th>Env</th>
+                <th>Pkts (C/S)</th>
+                <th>Server Bytes</th>
+                <th>3&times; Limit</th>
+                <th>Mean (ms)</th>
+                <th>P95 (ms)</th>
+                <th>Mean PTOs</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: RQ3 & RQ4 -->
+    <section id="tab-rq34" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">RQ3 &amp; RQ4: Handover-Aware Scheme, Cert Reduction &amp; 0-RTT Mitigations</div>
+            <div class="card-desc">Evaluated on handshakes colliding with the 12s handover window (11.6s &ndash; 12.5s).</div>
+          </div>
+          <div class="controls">
+            <label for="rq34Profile">Profile:</label>
+            <select id="rq34Profile"></select>
+            <label for="slaSlider">SLA Threshold: <strong id="slaVal">600</strong> ms</label>
+            <input type="range" id="slaSlider" min="200" max="1200" step="50" value="600" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="chart-box"><canvas id="rq34LatencyChart"></canvas></div>
+          <div class="chart-box"><canvas id="rq34PtoChart"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: SANDBOX & QLOG -->
+    <section id="tab-sandbox" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Interactive QUIC Handshake Sandbox (In-Browser RFC 9000/9002 Simulator)</div>
+            <div class="card-desc">Test any PQ profile, handover offset, Retry, certificate scaling, and Handover-Aware scheduling live.</div>
+          </div>
+        </div>
+        <div class="sandbox-form">
+          <div class="form-group">
+            <label for="sbProfile">Cryptographic Profile</label>
+            <select id="sbProfile"></select>
+          </div>
+          <div class="form-group">
+            <label for="sbStart">Start Time in 60s Trace (s)</label>
+            <input type="number" id="sbStart" min="0" max="59.9" step="0.1" value="11.9" />
+          </div>
+          <div class="form-group">
+            <label for="sbScheme">Establishment Scheme</label>
+            <select id="sbScheme">
+              <option value="unmodified">Unmodified QUIC</option>
+              <option value="handover_aware">Handover-Aware Scheme</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="sbMitigation">Mitigation</label>
+            <select id="sbMitigation">
+              <option value="none">None (Full Cert)</option>
+              <option value="compress">Cert Compression (0.65&times;)</option>
+              <option value="mtc">MTC-Style Cert (0.35&times;)</option>
+              <option value="0rtt">0-RTT Resumption</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="sbRetry">Address Validation Retry</label>
+            <select id="sbRetry">
+              <option value="false">Disabled</option>
+              <option value="true">Enabled (+1 RTT)</option>
+            </select>
+          </div>
+          <div class="form-group" style="display:flex;align-items:flex-end;">
+            <button class="upload-btn" id="sbRunBtn" style="width:100%;">Run Simulation</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid" id="sbMetrics"></div>
+
+        <div style="margin-bottom:1rem;">
+          <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:var(--muted);">
+            <span>QUIC 3&times; Anti-Amplification Budget Usage</span>
+            <span id="sbAmpText">--</span>
+          </div>
+          <div class="meter-bar"><div class="meter-fill" id="sbAmpBar" style="width:0%"></div></div>
+        </div>
+
+        <div class="card-title" style="font-size:0.95rem;margin-bottom:0.5rem;">Packet &amp; Timer Event Trace (qlog)</div>
+        <div class="qlog-list" id="sbQlog"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Recorded Sample qlog Traces (from Python Experiment Suite)</div>
+          <select id="sampleQlogSelect"></select>
+        </div>
+        <div class="qlog-list" id="sampleQlogBox"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Built for Advanced Computer Networks (ACN) &middot;
+    <a href="https://github.com/Yashcodes05/Post-Quantum-QUIC-Satellite-" target="_blank" rel="noopener">GitHub Repository</a>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
