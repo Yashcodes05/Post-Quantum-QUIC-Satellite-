@@ -157,7 +157,9 @@ def simulate_handshake(
     pto_base_ms = max(250.0, link0["rtt_ms"] * 3.0)
 
     if scheme == "handover_aware":
-        est_ms = link0["rtt_ms"] * 2.0 + base_profile.crypto_compute_ms
+        # Larger PQ profiles need more RTTs (due to 3x amp limit) & longer clear windows
+        est_rtts = 3.0 if (base_profile.server_flight_bytes + base_profile.cert_chain_bytes) > (3 * max(1200, base_profile.client_packets * MTU_PAYLOAD_BYTES)) else 2.0
+        est_ms = link0["rtt_ms"] * est_rtts + base_profile.crypto_compute_ms
         decision = evaluate_initiation(
             start_time_s=start_time_s,
             estimated_handshake_ms=est_ms,

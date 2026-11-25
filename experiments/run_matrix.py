@@ -45,7 +45,7 @@ def run_all(starlink_trace_path: Path, terrestrial_trace_path: Path, output_path
 
     # RQ1: Handover Cycle Sweep around the 12.0s handover mark (offsets -2.0s to +2.0s)
     offsets = [-2.0, -1.0, -0.5, -0.25, 0.0, 0.15, 0.3, 0.5, 1.0, 2.0]
-    rq1_profiles = ["X25519+RSA2048", "P256_Kyber768+RSA2048", "Kyber768+Dilithium3", "Kyber1024+Dilithium5"]
+    rq1_profiles = ["X25519+RSA2048", "P256_Kyber768+RSA2048", "Kyber768+Dilithium3", "Kyber768+SPHINCS+"]
     rq1_sweep = []
 
     for prof in rq1_profiles:

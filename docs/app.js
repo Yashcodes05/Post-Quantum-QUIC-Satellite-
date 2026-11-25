@@ -376,15 +376,21 @@ function runBrowserSandbox() {
       name: "transport:flight_sent",
       data: `Flight ${f + 1}: ${pkts} pkts, link RTT=${l.rtt_ms.toFixed(1)}ms, loss=${l.loss_pct.toFixed(1)}%`,
     });
-    if (expectedLoss >= 0.45) {
-      ptos += 1;
-      elapsed += ptoMs + l.rtt_ms;
-      curT += (ptoMs + l.rtt_ms) / 1000;
-      events.push({
-        t: elapsed,
-        name: "recovery:pto_retransmit",
-        data: `PTO fired (${ptoMs.toFixed(0)}ms) due to burst loss`,
-      });
+    // Trigger PTO if burst loss probability hits at least one packet in the flight
+    const pAnyLost = 1 - Math.pow(1 - Math.min(0.95, l.loss_pct / 100), pkts);
+    if (pAnyLost >= 0.35 || expectedLoss >= 0.35) {
+      const rounds = pkts > 20 ? 2 : 1;
+      for (let r = 0; r < rounds; r++) {
+        ptos += 1;
+        const stepPto = ptoMs * (scheme === "handover_aware" ? Math.pow(1.25, r) : Math.pow(2, r));
+        elapsed += stepPto + l.rtt_ms;
+        curT += (stepPto + l.rtt_ms) / 1000;
+        events.push({
+          t: elapsed,
+          name: "recovery:pto_retransmit",
+          data: `PTO #${ptos} fired (${stepPto.toFixed(0)}ms) - ${Math.round(pAnyLost * 100)}% flight loss risk`,
+        });
+      }
     }
   }
 
@@ -438,6 +444,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("rq34Profile").addEventListener("change", renderRQ34);
   document.getElementById("slaSlider").addEventListener("input", renderRQ34);
   document.getElementById("sbRunBtn").addEventListener("click", runBrowserSandbox);
+  ["sbProfile", "sbStart", "sbScheme", "sbMitigation", "sbRetry"].forEach((id) => {
+    document.getElementById(id).addEventListener("change", runBrowserSandbox);
+    document.getElementById(id).addEventListener("input", runBrowserSandbox);
+  });
   document.getElementById("sampleQlogSelect").addEventListener("change", renderSampleQlog);
 
   document.getElementById("jsonUpload").addEventListener("change", async (e) => {
